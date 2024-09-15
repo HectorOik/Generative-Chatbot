@@ -1,3 +1,7 @@
+import tensorflow as tf
+from tensorflow.keras.preprocessing.text import Tokenizer
+from tensorflow.keras.preprocessing.sequence import pad_sequences
+
 import re
 
 #importing the dataset the bot is trained on
@@ -27,4 +31,35 @@ for conversation in conversations_3:
         lines.append(final_line)
     final_conversations.append(lines)
 
-print(final_conversations)
+# print(final_conversations)
+input_texts = []
+target_texts = []
+
+# flatenning conversations
+for conv in final_conversations:
+    for i in range(0, len(conv), 2):
+        input_texts.append(conv[i])
+        target_texts.append(conv[i+1])
+
+# print(input_texts)
+# print()
+# print(target_texts)
+
+# create a Tokenizer and fit on all texts
+tokenizer = Tokenizer(filters='', lower=True, oov_token='<OOV>')
+tokenizer.fit_on_texts(input_texts + target_texts)
+
+# Convert text to sequences
+input_sequences = tokenizer.texts_to_sequences(input_texts)
+target_sequences = tokenizer.texts_to_sequences(target_texts)
+
+# Pad sequences to ensure uniform input length
+max_input_length = max(len(seq) for seq in input_sequences)
+max_target_length = max(len(seq) for seq in target_sequences)
+
+input_sequences = pad_sequences(input_sequences, maxlen=max_input_length, padding='post')
+target_sequences = pad_sequences(target_sequences, maxlen=max_target_length, padding='post')
+
+# convert target sequences to one-hot encoding for categorical prediction
+vocab_size = len(tokenizer.word_index) + 1
+target_sequences = tf.keras.utils.to_categorical(target_sequences, num_classes=vocab_size)
