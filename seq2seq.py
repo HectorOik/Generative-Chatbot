@@ -8,9 +8,9 @@ from preprocessing import (
     )
 
 # Hyperparameters
-dimensionality = 256
-batch_size = 64
-epochs = 100
+dimensionality = 128
+batch_size = 16
+epochs = 5
 
 # Encoder
 encoder_inputs = Input(shape=(None, num_encoder_tokens))
@@ -35,7 +35,7 @@ model = Model([encoder_inputs, decoder_inputs], decoder_outputs)
 model.compile(optimizer='rmsprop', loss='categorical_crossentropy', metrics=['accuracy'])
 
 # Print model summary
-# model.summary()
+model.summary()
 
 # training the model
 model.fit(
@@ -45,3 +45,5 @@ model.fit(
     batch_size=batch_size, 
     validation_split=0.2
     )
+
+model.save('chatbot_seq2seq_model.h5')
