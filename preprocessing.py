@@ -1,85 +1,51 @@
+import numpy as np
 import tensorflow as tf
 from tensorflow.keras.preprocessing.text import Tokenizer
 from tensorflow.keras.preprocessing.sequence import pad_sequences
-
-import re
+from preprocessing_functions import(
+    pad_or_truncate_conversations,
+    raw_data_to_clean_conversation_pairs
+)
 
 #importing the dataset the bot is trained on
 dataset = "human_chat.txt"
+# dataset = "test_dataset.txt"
 
 with open(dataset, 'r', encoding='utf-8') as f:
     data = f.read()
 
-conversations = re.split(r'(?i)(Human \d+: Hi[!.]*)', data)
+conversations = raw_data_to_clean_conversation_pairs(data)
 
-conversations_2 = []
-for i in range(1, len(conversations), 2):
-    conv = conversations[i] + conversations[i+1]
-    conversations_2.append(conv.strip())
+#
 
-conversations_3 = []
-for conversation in conversations_2:
-    conversations_3.append(conversation.split('\n'))
+pairs = []
+for conversation in conversations:
+    for i in range(len(conversation) - 1):
+        input_text = conversation[i][1]
+        target_text = conversation[i+1][0]
+        pairs.append((input_text, target_text))
 
-#make final_conversations, a list of lists where each list is a complete conversation.
-final_conversations = []
-for conversation in conversations_3:
-    lines = []
-    #remove the "Human 1 / Human 2" which comes before the dialogue
-    for line in conversation:
-        final_line = re.sub(r'(?i)(Human \d+: )', '', line)
-        lines.append(final_line)
-    final_conversations.append(lines)
+flattened_inputs, flattened_targets = zip(*pairs)
 
-input_texts = []
-target_texts = []
-
-# flatenning conversations
-for conv in final_conversations:
-    for i in range(1, len(conv), 2):
-        input_texts.append(conv[i-1])
-        target_texts.append(conv[i])
-
-# print(final_conversations)
-# print(input_texts)
+# print(flattened_inputs[:5])
 # print()
-# print(target_texts)
+# print(flattened_targets[:5])
 
-# create a Tokenizer and fit on all texts
+
 tokenizer = Tokenizer(filters='', lower=True, oov_token='<OOV>')
-tokenizer.fit_on_texts(input_texts + target_texts)
+tokenizer.fit_on_texts(flattened_inputs + flattened_targets)
 
-# Convert text to sequences
-input_sequences = tokenizer.texts_to_sequences(input_texts)
-target_sequences = tokenizer.texts_to_sequences(target_texts)
+input_sequences = tokenizer.texts_to_sequences(flattened_inputs)
+target_sequences = tokenizer.texts_to_sequences(flattened_targets)
 
-# Pad sequences to ensure uniform input length
-max_input_length = max(len(seq) for seq in input_sequences)
-max_target_length = max(len(seq) for seq in target_sequences)
+MAX_SEQ_LENGTH = max(max(len(seq) for seq in input_sequences), max(len(seq) for seq in target_sequences))
 
-input_sequences = pad_sequences(input_sequences, maxlen=max_input_length, padding='post')
-target_sequences = pad_sequences(target_sequences, maxlen=max_target_length, padding='post')
+padded_inputs = pad_sequences(input_sequences, maxlen=MAX_SEQ_LENGTH, padding='post')
+padded_targets = pad_sequences(target_sequences, maxlen=MAX_SEQ_LENGTH, padding='post')
 
-# convert target sequences to one-hot encoding for categorical prediction
-vocab_size = len(tokenizer.word_index) + 1
+inputs = np.array(padded_inputs)
+targets = np.array(padded_targets)
 
-encoder_input_data = input_sequences
-encoder_input_data = tf.keras.utils.to_categorical(input_sequences, num_classes=vocab_size)
-# target_sequences = tf.keras.utils.to_categorical(target_sequences, num_classes=vocab_size) 
+print(inputs.shape, targets.shape)
 
-# preparing data for seq2seq model
-decoder_input_data = target_sequences[:, :-1]
-decoder_target_data = target_sequences[:, 1:]
-decoder_input_data = tf.keras.utils.to_categorical(decoder_input_data, num_classes=vocab_size)
-decoder_target_data = tf.keras.utils.to_categorical(decoder_target_data, num_classes=vocab_size)
-
-# additional variables for model training
-num_encoder_tokens = vocab_size # number of unique tokens for the encoder
-num_decoder_tokens = vocab_size # number of unique tokens for the decoder
-max_encoder_seq_length = max_input_length
-max_decoder_seq_length = max_target_length
-
-# print(f'Encoder Input Data Shape: {encoder_input_data.shape}')
-# print(f'Adjusted Decoder Input Data Shape: {decoder_input_data.shape}')
-# print(f'Adjusted Decoder Target Data Shape: {decoder_target_data.shape}')
-print(f'Vocab size: {vocab_size}')
+print(f'Tokenizer word index {tokenizer.word_index}')
