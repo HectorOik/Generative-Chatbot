@@ -1,6 +1,6 @@
 # Generative-Chatbot
 
-THE MODEL IS NOT FUNCTIONING YET
+## THE MODEL IS NOT FUNCTIONING YET
 
 This is the link to the training set
 https://www.kaggle.com/datasets/projjal1/human-conversation-training-data
